@@ -32,13 +32,13 @@ export default function DashboardPage() {
         }
 
         const res = await fetch(
-          `http://localhost:4000/api/ordenes?${params.toString()}`,
+          `${import.meta.env.VITE_API_URL}/api/ordenes?${params.toString()}`,
           {
             headers: {
               "Content-Type": "application/json",
               Authorization: token ? `Bearer ${token}` : "",
             },
-          }
+          }   
         );
 
         const data = await res.json();
@@ -137,4 +137,4 @@ export default function DashboardPage() {
       )}
     </div>
   );
-}   
+}

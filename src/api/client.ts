@@ -1,7 +1,7 @@
 // src/api/client.ts
 import { getToken, logout } from "../hooks/useAuth";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;  
 
 export async function authFetch(
   path: string,

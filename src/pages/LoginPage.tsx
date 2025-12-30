@@ -15,11 +15,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:4000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );   
 
       const data = await res.json();
 
@@ -43,7 +46,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center px-4">
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden grid md:grid-cols-2">
-        
         {/* Panel izquierdo */}
         <div className="bg-slate-900 text-white p-10 flex flex-col justify-between">
           <div>
@@ -104,7 +106,7 @@ export default function LoginPage() {
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
             </div>
-    
+
             <div>
               <label className="text-xs text-slate-600">Contraseña</label>
               <input
@@ -113,9 +115,9 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
-            </div>    
+            </div>
 
-            <button    
+            <button
               type="submit"
               disabled={loading}
               className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-lg py-2 text-sm font-medium transition"
@@ -127,8 +129,8 @@ export default function LoginPage() {
           <p className="mt-6 text-[11px] text-slate-400">
             Uso exclusivo interno de Coagro Internacional.
           </p>
-        </div>   
-      </div>      
+        </div>
+      </div>
     </div>
   );
-}       
+}
