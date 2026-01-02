@@ -24,7 +24,7 @@ export default function LoginPage() {
         }
       );   
 
-      const data = await res.json();
+      const data = await res.json();   
 
       if (!res.ok) {
         setError(data.error || "Credenciales inválidas");
