@@ -6,6 +6,7 @@ import AgregarManoObraModal from "../components/AgregarManoObraModal";
 import AgregarRepuestoModal from "../components/AgregarRepuestoModal";
 import OrdenTimeline from "../components/OrdenTimeline";
 import EditarManoObraModal from "../components/EditarManoObraModal";
+import EditarRepuestoModal from "../components/EditarRepuestoModal";
 
 type Orden = any;
 
@@ -533,7 +534,7 @@ export default function OrderDetailPage() {
                         </>
                       )}
                     </div>
-  
+
                     {!esCerrada && (
                       <div className="mt-2 flex gap-2">
                         <button
@@ -552,7 +553,7 @@ export default function OrderDetailPage() {
                           className="rounded-md border border-red-200 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
                           onClick={() => eliminarRepuesto(r.id)}
                         >
-                          Eliminar      
+                          Eliminar
                         </button>
                       </div>
                     )}
@@ -609,6 +610,26 @@ export default function OrderDetailPage() {
           setOrden((prev: any) => ({
             ...prev,
             manoObra: (prev?.manoObra || []).map((x: any) =>
+              x.id === upd.id ? { ...x, ...upd } : x
+            ),
+          }));
+          refreshTimeline();
+        }}
+      />
+
+      <EditarRepuestoModal
+        open={openEditarRepuesto}
+        onClose={() => {
+          setOpenEditarRepuesto(false);
+          setEditingRepuesto(null);
+        }}
+        ordenId={orden.id}
+        item={editingRepuesto}  
+        esCerrada={esCerrada}
+        onSaved={(upd) => {
+          setOrden((prev: any) => ({
+            ...prev,
+            repuestos: (prev?.repuestos || []).map((x: any) =>
               x.id === upd.id ? { ...x, ...upd } : x
             ),
           }));
