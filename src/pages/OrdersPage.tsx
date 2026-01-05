@@ -57,7 +57,7 @@ export default function OrdersPage() {
             Órdenes de servicio
           </h1>
           <p className="text-xs text-slate-500">
-            Vista global · luego metemos filtros por sede/estado/técnico.
+            Vista global · Filtros en desarrollo v1.0
           </p>
         </div>
 
