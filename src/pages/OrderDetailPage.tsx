@@ -7,6 +7,7 @@ import AgregarRepuestoModal from "../components/AgregarRepuestoModal";
 import OrdenTimeline from "../components/OrdenTimeline";
 import EditarManoObraModal from "../components/EditarManoObraModal";
 import EditarRepuestoModal from "../components/EditarRepuestoModal";
+import { getUsuario } from "../hooks/useAuth";
 
 type Orden = any;
 
@@ -55,6 +56,10 @@ export default function OrderDetailPage() {
   // ✅ Timeline refresh
   const [timelineKey, setTimelineKey] = useState(0);
   const refreshTimeline = () => setTimelineKey((k) => k + 1);
+
+  const usuario = getUsuario();
+  const puedeReabrir =
+    usuario?.rol === "ADMIN" || usuario?.rol === "JEFE_TALLER";
 
   const esCerrada = useMemo(() => {
     const st = orden?.estado;
@@ -193,6 +198,32 @@ export default function OrderDetailPage() {
       toast.error(err?.message || "No se pudo cerrar la orden", "Error");
     } finally {
       setClosing(false);
+    }
+  };
+
+  const handleReabrirOrden = async () => {
+    if (!orden) return;
+
+    const ok = window.confirm(
+      `¿Reabrir la orden ${orden.codigo}?\n\nVolverá a permitir edición.`
+    );
+    if (!ok) return;
+
+    try {
+      const upd = await authFetch(`/api/ordenes/${orden.id}/reabrir`, {
+        method: "PATCH",
+      });
+
+      setOrden((prev: any) => ({
+        ...prev,
+        ...upd,
+      }));
+
+      toast.success("Orden reabierta", "Edición habilitada");
+      refreshTimeline();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "No se pudo reabrir", "Error");
     }
   };
 
@@ -390,6 +421,16 @@ export default function OrderDetailPage() {
             >
               {closing ? "Cerrando..." : "Cerrar orden"}
             </button>
+
+            {esCerrada && puedeReabrir && (
+              <button
+                type="button"
+                onClick={handleReabrirOrden}
+                className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100"
+              >
+                🔓 Reabrir orden
+              </button>
+            )}
 
             <button
               onClick={() => navigate("/", { replace: true })}
@@ -624,7 +665,7 @@ export default function OrderDetailPage() {
           setEditingRepuesto(null);
         }}
         ordenId={orden.id}
-        item={editingRepuesto}  
+        item={editingRepuesto}
         esCerrada={esCerrada}
         onSaved={(upd) => {
           setOrden((prev: any) => ({

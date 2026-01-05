@@ -2,7 +2,7 @@ export type UsuarioAuth = {
   id: number;
   nombre: string;
   email: string;
-  rol: "ADMIN" | "TECNICO" | "RECEPCION";
+  rol: "ADMIN" | "TECNICO" | "RECEPCION" | "JEFE_TALLER";
   sedeId: number | null;
 };
 
