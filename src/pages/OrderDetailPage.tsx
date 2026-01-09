@@ -342,8 +342,8 @@ export default function OrderDetailPage() {
                 ✅ Orden cerrada · Solo lectura
               </div>
             )}
-
-            <div className="mt-8">
+  
+            <div className="mt-4 w-full">
               <EvidenciasOrden ordenId={orden.id} disabled={esCerrada} />
             </div>
           </div>
