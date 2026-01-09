@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authFetch } from "../api/client";
+import { Plus, Trash2, X } from "lucide-react";
 
 type Evidencia = {
   id: number;
@@ -11,7 +12,7 @@ type Evidencia = {
 
 type EvidenciasOrdenProps = {
   ordenId: number;
-  disabled?: boolean; // si la orden está cerrada
+  disabled?: boolean;
 };
 
 export default function EvidenciasOrden({
@@ -25,7 +26,10 @@ export default function EvidenciasOrden({
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerItem, setViewerItem] = useState<Evidencia | null>(null);
 
-  const API_URL = useMemo(() => import.meta.env.VITE_API_URL || "", []);
+  // Base para mostrar archivos
+  // Si VITE_API_URL = "https://indigo-lark-430359.hostingersite.com"
+  // y ev.url = "/uploads/..." => queda perfecto
+  const FILE_BASE = useMemo(() => import.meta.env.VITE_API_URL || "", []);
 
   const openViewer = (ev: Evidencia) => {
     setViewerItem(ev);
@@ -37,7 +41,6 @@ export default function EvidenciasOrden({
     setViewerItem(null);
   };
 
-  // Cargar evidencias
   const cargar = useCallback(async () => {
     try {
       const data = await authFetch(`/api/ordenes/${ordenId}/evidencias`);
@@ -53,17 +56,6 @@ export default function EvidenciasOrden({
     cargar();
   }, [ordenId, cargar]);
 
-  // Cerrar viewer con ESC
-  useEffect(() => {
-    if (!viewerOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeViewer();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [viewerOpen]);
-
-  // Subir evidencia
   const subir = async (file: File) => {
     if (disabled) return;
 
@@ -72,7 +64,7 @@ export default function EvidenciasOrden({
       const fd = new FormData();
       fd.append("file", file);
 
-      // ⚠️ IMPORTANTE: authFetch debe NO forzar content-type JSON si body es FormData.
+      // NO Content-Type manual
       await authFetch(`/api/ordenes/${ordenId}/evidencias`, {
         method: "POST",
         body: fd as any,
@@ -93,16 +85,13 @@ export default function EvidenciasOrden({
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*,video/*";
-
     input.onchange = () => {
       const file = input.files?.[0];
       if (file) subir(file);
     };
-
     input.click();
   };
 
-  // Eliminar evidencia (requiere endpoint DELETE en backend)
   const eliminar = async (ev: Evidencia) => {
     if (disabled) return;
 
@@ -112,146 +101,161 @@ export default function EvidenciasOrden({
     if (!ok) return;
 
     try {
+      // Optimista: la saco ya del UI
+      setItems((prev) => prev.filter((x) => x.id !== ev.id));
+
       await authFetch(`/api/ordenes/${ordenId}/evidencias/${ev.id}`, {
         method: "DELETE",
       });
-      await cargar();
+
+      // Si estaba abierta en viewer, la cierro
+      if (viewerItem?.id === ev.id) closeViewer();
     } catch (e: any) {
-      console.error(e);
-      alert(e?.message || "No se pudo eliminar la evidencia");
+      alert(e?.message || "No se pudo eliminar");
+      // Rollback
+      await cargar();
     }
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="text-xs font-semibold uppercase text-slate-500">
-            Evidencias
-          </div>
-
-          <div className="mt-1 text-lg font-extrabold text-slate-900">
-            Fotos & videos ({items.length})
-          </div>
-
-          {disabled && (
-            <div className="mt-1 text-xs text-slate-500">
-              Orden cerrada · evidencias en solo lectura
+    <>
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-xs font-semibold uppercase text-slate-500">
+              Evidencias
             </div>
-          )}
+            <div className="mt-1 text-lg font-extrabold text-slate-900">
+              Fotos & videos ({items.length})
+            </div>
+
+            {disabled && (
+              <div className="mt-1 text-xs text-slate-500">
+                Orden cerrada · evidencias en solo lectura
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={abrirSelector}
+            disabled={loading || disabled}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Plus size={18} />
+            {loading ? "Subiendo..." : "Agregar"}
+          </button>
         </div>
 
-        <button
-          onClick={abrirSelector}
-          disabled={loading || disabled}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Subiendo..." : "+ Agregar"}
-        </button>
+        {/* Grid */}
+        {items.length === 0 ? (
+          <div className="mt-4 flex h-44 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 text-center text-sm font-semibold text-slate-500">
+            No hay evidencias aún. Sube una foto o video para documentar el
+            trabajo.
+          </div>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {items.map((ev) => (
+              <div
+                key={ev.id}
+                className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white"
+                title={ev.tipo}
+              >
+                {/* media clickable */}
+                <button
+                  type="button"
+                  onClick={() => openViewer(ev)}
+                  className="block w-full cursor-zoom-in"
+                >
+                  {ev.tipo === "FOTO" ? (
+                    <img
+                      src={`${FILE_BASE}${ev.url}`}
+                      className="h-28 w-full object-cover"
+                      alt="Evidencia"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <video
+                      src={`${FILE_BASE}${ev.url}`}
+                      className="h-28 w-full object-cover"
+                      controls
+                    />
+                  )}
+                </button>
+
+                {/* delete */}
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      eliminar(ev);
+                    }}
+                    className="absolute right-2 top-2 inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white/95 p-2 opacity-0 shadow-sm transition group-hover:opacity-100"
+                    title="Eliminar"
+                  >
+                    <Trash2 size={16} className="text-slate-800" />
+                  </button>
+                )}
+
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-xs font-extrabold text-slate-800">
+                    {ev.tipo}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {new Date(ev.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Grid */}
-      {items.length === 0 ? (
-        <div className="mt-4 flex h-44 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 text-center text-sm font-semibold text-slate-500">
-          No hay evidencias aún. Sube una foto o video para documentar el
-          trabajo.
-        </div>
-      ) : (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {items.map((ev) => (
-            <div
-              key={ev.id}
-              className="relative overflow-hidden rounded-xl border border-slate-200 bg-white"
-              title={ev.tipo}
-            >
-              {/* Botón eliminar */}
-              {!disabled && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    eliminar(ev);
-                  }}
-                  className="absolute right-2 top-2 z-10 rounded-lg border border-slate-200 bg-white/95 px-2 py-1 text-xs font-extrabold text-slate-700 hover:bg-slate-50"
-                  title="Eliminar"
-                >
-                  🗑️
-                </button>
-              )}
-
-              {/* Media (click = zoom) */}
-              <div onClick={() => openViewer(ev)} className="cursor-zoom-in">
-                {ev.tipo === "FOTO" ? (
-                  <img
-                    src={`${API_URL}${ev.url}`}
-                    className="h-28 w-full object-cover"
-                    alt="Evidencia"
-                    loading="lazy"
-                  />
-                ) : (
-                  <video
-                    src={`${API_URL}${ev.url}`}
-                    className="h-28 w-full object-cover"
-                    controls
-                  />
-                )}
-              </div>
-
-              <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-xs font-extrabold text-slate-800">
-                  {ev.tipo}
-                </span>
-                <span className="text-xs text-slate-500">
-                  {new Date(ev.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Viewer */}
+      {/* Viewer modal */}
       {viewerOpen && viewerItem && (
         <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
           onClick={closeViewer}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-5"
         >
           <div
+            className="relative w-full max-w-4xl overflow-hidden rounded-2xl bg-white"
             onClick={(e) => e.stopPropagation()}
-            className="w-[min(980px,95vw)] overflow-hidden rounded-2xl bg-white shadow-2xl"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <div className="text-sm font-extrabold text-slate-900">
-                {viewerItem.tipo} ·{" "}
-                {new Date(viewerItem.createdAt).toLocaleString()}
+                Evidencia · {viewerItem.tipo}
               </div>
 
               <button
+                type="button"
                 onClick={closeViewer}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-extrabold text-slate-700 hover:bg-slate-50"
+                className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white p-2 hover:bg-slate-50"
+                title="Cerrar"
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
-            <div className="flex justify-center bg-slate-950 p-4">
+            <div className="max-h-[75vh] overflow-auto bg-black">
               {viewerItem.tipo === "FOTO" ? (
                 <img
-                  src={`${API_URL}${viewerItem.url}`}
-                  className="max-h-[70vh] max-w-full rounded-xl object-contain"
-                  alt="Evidencia"
+                  src={`${FILE_BASE}${viewerItem.url}`}
+                  className="mx-auto max-h-[75vh] w-auto object-contain"
+                  alt="Evidencia ampliada"
                 />
               ) : (
                 <video
-                  src={`${API_URL}${viewerItem.url}`}
+                  src={`${FILE_BASE}${viewerItem.url}`}
+                  className="mx-auto max-h-[75vh] w-full"
                   controls
-                  className="max-h-[70vh] max-w-full rounded-xl"
+                  autoPlay
                 />
               )}
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
