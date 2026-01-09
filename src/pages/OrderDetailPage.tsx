@@ -302,8 +302,9 @@ export default function OrderDetailPage() {
     <div className="space-y-4">
       {/* Header */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
+        <div className="flex flex-col gap-4 md:flex-row md:items-start">
+          {/* ✅ COLUMNA IZQUIERDA (CRECE Y OCUPA TODO) */}
+          <div className="flex-1 min-w-0">
             <div className="text-xs font-semibold uppercase text-slate-500">
               Orden de servicio
             </div>
@@ -342,13 +343,25 @@ export default function OrderDetailPage() {
                 ✅ Orden cerrada · Solo lectura
               </div>
             )}
-  
+
+            {/* ✅ AQUÍ VA EVIDENCIAS (OCUPA TODO EL ANCHO DE LA IZQUIERDA) */}
             <div className="mt-4 w-full">
               <EvidenciasOrden ordenId={orden.id} disabled={esCerrada} />
             </div>
+
+            {/* Motivo */}
+            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+              <div className="text-xs font-semibold uppercase text-slate-500">
+                Motivo de ingreso
+              </div>
+              <div className="mt-1 text-sm text-slate-800">
+                {orden.motivoIngreso}
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          {/* ✅ COLUMNA DERECHA (ANCHO FIJO EN DESKTOP) */}
+          <div className="w-full md:w-[340px] flex flex-col gap-2">
             {/* Estado */}
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
               <div className="text-xs font-semibold uppercase text-slate-500">
@@ -453,15 +466,6 @@ export default function OrderDetailPage() {
             >
               🖨️ Imprimir
             </button>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-          <div className="text-xs font-semibold uppercase text-slate-500">
-            Motivo de ingreso
-          </div>
-          <div className="mt-1 text-sm text-slate-800">
-            {orden.motivoIngreso}
           </div>
         </div>
       </div>
@@ -685,3 +689,4 @@ export default function OrderDetailPage() {
     </div>
   );
 }
+   
