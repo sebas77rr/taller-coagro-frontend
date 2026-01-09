@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { authFetch } from "../api/client";
 
 type Evidencia = {
@@ -11,7 +11,7 @@ type Evidencia = {
 
 type EvidenciasOrdenProps = {
   ordenId: number;
-  disabled?: boolean; // ✅ si la orden está cerrada
+  disabled?: boolean; // si la orden está cerrada
 };
 
 export default function EvidenciasOrden({
@@ -21,6 +21,23 @@ export default function EvidenciasOrden({
   const [items, setItems] = useState<Evidencia[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Viewer (zoom)
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerItem, setViewerItem] = useState<Evidencia | null>(null);
+
+  const API_URL = useMemo(() => import.meta.env.VITE_API_URL || "", []);
+
+  const openViewer = (ev: Evidencia) => {
+    setViewerItem(ev);
+    setViewerOpen(true);
+  };
+
+  const closeViewer = () => {
+    setViewerOpen(false);
+    setViewerItem(null);
+  };
+
+  // Cargar evidencias
   const cargar = useCallback(async () => {
     try {
       const data = await authFetch(`/api/ordenes/${ordenId}/evidencias`);
@@ -36,6 +53,17 @@ export default function EvidenciasOrden({
     cargar();
   }, [ordenId, cargar]);
 
+  // Cerrar viewer con ESC
+  useEffect(() => {
+    if (!viewerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeViewer();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [viewerOpen]);
+
+  // Subir evidencia
   const subir = async (file: File) => {
     if (disabled) return;
 
@@ -44,10 +72,9 @@ export default function EvidenciasOrden({
       const fd = new FormData();
       fd.append("file", file);
 
-      // 🔥 OJO: aquí NO ponemos Content-Type, el browser pone el boundary solo
+      // ⚠️ IMPORTANTE: authFetch debe NO forzar content-type JSON si body es FormData.
       await authFetch(`/api/ordenes/${ordenId}/evidencias`, {
         method: "POST",
-        headers: {}, // evita que authFetch meta Content-Type json
         body: fd as any,
       });
 
@@ -75,6 +102,26 @@ export default function EvidenciasOrden({
     input.click();
   };
 
+  // Eliminar evidencia (requiere endpoint DELETE en backend)
+  const eliminar = async (ev: Evidencia) => {
+    if (disabled) return;
+
+    const ok = window.confirm(
+      "¿Eliminar esta evidencia? Esta acción no se puede deshacer."
+    );
+    if (!ok) return;
+
+    try {
+      await authFetch(`/api/ordenes/${ordenId}/evidencias/${ev.id}`, {
+        method: "DELETE",
+      });
+      await cargar();
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message || "No se pudo eliminar la evidencia");
+    }
+  };
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       {/* Header */}
@@ -83,6 +130,7 @@ export default function EvidenciasOrden({
           <div className="text-xs font-semibold uppercase text-slate-500">
             Evidencias
           </div>
+
           <div className="mt-1 text-lg font-extrabold text-slate-900">
             Fotos & videos ({items.length})
           </div>
@@ -114,23 +162,40 @@ export default function EvidenciasOrden({
           {items.map((ev) => (
             <div
               key={ev.id}
-              className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+              className="relative overflow-hidden rounded-xl border border-slate-200 bg-white"
               title={ev.tipo}
             >
-              {ev.tipo === "FOTO" ? (
-                <img
-                  src={`${import.meta.env.VITE_API_URL}${ev.url}`}
-                  className="h-28 w-full object-cover"
-                  alt="Evidencia"
-                  loading="lazy"
-                />
-              ) : (
-                <video
-                  src={`${import.meta.env.VITE_API_URL}${ev.url}`}
-                  className="h-28 w-full object-cover"
-                  controls
-                />
+              {/* Botón eliminar */}
+              {!disabled && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    eliminar(ev);
+                  }}
+                  className="absolute right-2 top-2 z-10 rounded-lg border border-slate-200 bg-white/95 px-2 py-1 text-xs font-extrabold text-slate-700 hover:bg-slate-50"
+                  title="Eliminar"
+                >
+                  🗑️
+                </button>
               )}
+
+              {/* Media (click = zoom) */}
+              <div onClick={() => openViewer(ev)} className="cursor-zoom-in">
+                {ev.tipo === "FOTO" ? (
+                  <img
+                    src={`${API_URL}${ev.url}`}
+                    className="h-28 w-full object-cover"
+                    alt="Evidencia"
+                    loading="lazy"
+                  />
+                ) : (
+                  <video
+                    src={`${API_URL}${ev.url}`}
+                    className="h-28 w-full object-cover"
+                    controls
+                  />
+                )}
+              </div>
 
               <div className="flex items-center justify-between px-3 py-2">
                 <span className="text-xs font-extrabold text-slate-800">
@@ -142,6 +207,49 @@ export default function EvidenciasOrden({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Viewer */}
+      {viewerOpen && viewerItem && (
+        <div
+          onClick={closeViewer}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-5"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-[min(980px,95vw)] overflow-hidden rounded-2xl bg-white shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <div className="text-sm font-extrabold text-slate-900">
+                {viewerItem.tipo} ·{" "}
+                {new Date(viewerItem.createdAt).toLocaleString()}
+              </div>
+
+              <button
+                onClick={closeViewer}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-extrabold text-slate-700 hover:bg-slate-50"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex justify-center bg-slate-950 p-4">
+              {viewerItem.tipo === "FOTO" ? (
+                <img
+                  src={`${API_URL}${viewerItem.url}`}
+                  className="max-h-[70vh] max-w-full rounded-xl object-contain"
+                  alt="Evidencia"
+                />
+              ) : (
+                <video
+                  src={`${API_URL}${viewerItem.url}`}
+                  controls
+                  className="max-h-[70vh] max-w-full rounded-xl"
+                />
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

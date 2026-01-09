@@ -7,6 +7,10 @@ export async function authFetch(
   path: string,
   options: RequestInit = {}
 ): Promise<any> {
+  if (!API_URL) {
+    throw new Error("VITE_API_URL no está definido en el frontend (.env)");
+  }
+
   const token = getToken();
 
   // Detectar si body es FormData (uploads)
@@ -38,6 +42,9 @@ export async function authFetch(
     throw new Error("Token inválido o expirado");
   }
 
+  // 204 → no content
+  if (res.status === 204) return null;
+
   // Leer respuesta robusta (json o texto)
   const contentType = res.headers.get("content-type") || "";
   const payload = contentType.includes("application/json")
@@ -45,7 +52,6 @@ export async function authFetch(
     : await res.text();
 
   if (!res.ok) {
-    // intenta sacar mensaje bonito
     const msg =
       (payload as any)?.error ||
       (payload as any)?.message ||
@@ -54,4 +60,4 @@ export async function authFetch(
   }
 
   return payload;
-} 
+}
