@@ -8,6 +8,7 @@ import OrdenTimeline from "../components/OrdenTimeline";
 import EditarManoObraModal from "../components/EditarManoObraModal";
 import EditarRepuestoModal from "../components/EditarRepuestoModal";
 import { getUsuario } from "../hooks/useAuth";
+import EvidenciasOrden from "../components/EvidenciasOrden";
 
 type Orden = any;
 
@@ -459,6 +460,9 @@ export default function OrderDetailPage() {
             {orden.motivoIngreso}
           </div>
         </div>
+
+        {/* component evidencia */}
+        <EvidenciasOrden ordenId={orden.id} disabled={esCerrada} /> 
       </div>
 
       {/* Secciones */}

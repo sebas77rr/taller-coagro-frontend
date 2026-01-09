@@ -1,100 +1,103 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { authFetch } from "../api/client";
 
-interface Evidencia {
+type Evidencia = {
   id: number;
   tipo: "FOTO" | "VIDEO";
   url: string;
   thumbnail?: string | null;
   createdAt: string;
-}
+};
 
-interface Props {
+type EvidenciasOrdenProps = {
   ordenId: number;
-}
+  disabled?: boolean; // ✅ si la orden está cerrada
+};
 
-const API = "https://indigo-lark-430359.hostingersite.com";
-
-export default function EvidenciasOrden({ ordenId }: Props) {
+export default function EvidenciasOrden({
+  ordenId,
+  disabled = false,
+}: EvidenciasOrdenProps) {
   const [items, setItems] = useState<Evidencia[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const token = localStorage.getItem("taller_token");
-
-  const cargar = async () => {
-    const r = await fetch(`${API}/api/ordenes/${ordenId}/evidencias`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await r.json();
-    setItems(Array.isArray(data) ? data : []);
-  };
-
-  useEffect(() => {
-    cargar();
+  const cargar = useCallback(async () => {
+    try {
+      const data = await authFetch(`/api/ordenes/${ordenId}/evidencias`);
+      setItems(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Error cargando evidencias:", e);
+      setItems([]);
+    }
   }, [ordenId]);
 
-  const subir = async (file: File) => {
-    setLoading(true);
-    const fd = new FormData();
-    fd.append("file", file);
-
-    const r = await fetch(`${API}/api/ordenes/${ordenId}/evidencias`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: fd,
-    });
-
-    setLoading(false);
-
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
-      alert(err?.error || "Error subiendo evidencia");
-      return;
-    }
-
+  useEffect(() => {
+    if (!ordenId) return;
     cargar();
+  }, [ordenId, cargar]);
+
+  const subir = async (file: File) => {
+    if (disabled) return;
+
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      // 🔥 OJO: aquí NO ponemos Content-Type, el browser pone el boundary solo
+      await authFetch(`/api/ordenes/${ordenId}/evidencias`, {
+        method: "POST",
+        headers: {}, // evita que authFetch meta Content-Type json
+        body: fd as any,
+      });
+
+      await cargar();
+    } catch (e: any) {
+      console.error(e);
+      alert(e?.message || "Error subiendo evidencia");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const abrirSelector = () => {
+    if (disabled || loading) return;
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*,video/*";
+
     input.onchange = () => {
       const file = input.files?.[0];
       if (file) subir(file);
     };
+
     input.click();
   };
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #e8eef5",
-        borderRadius: 14,
-        padding: 18,
-        minHeight: 260,
-      }}
-    >
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div style={{ fontSize: 14, color: "#667085", fontWeight: 600 }}>EVIDENCIAS</div>
-          <div style={{ fontSize: 20, fontWeight: 800, marginTop: 2 }}>
+          <div className="text-xs font-semibold uppercase text-slate-500">
+            Evidencias
+          </div>
+          <div className="mt-1 text-lg font-extrabold text-slate-900">
             Fotos & videos ({items.length})
           </div>
+
+          {disabled && (
+            <div className="mt-1 text-xs text-slate-500">
+              Orden cerrada · evidencias en solo lectura
+            </div>
+          )}
         </div>
 
         <button
           onClick={abrirSelector}
-          disabled={loading}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 10,
-            border: "1px solid #d6e4ff",
-            background: loading ? "#f2f4f7" : "#eaf2ff",
-            cursor: loading ? "not-allowed" : "pointer",
-            fontWeight: 700,
-          }}
+          disabled={loading || disabled}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Subiendo..." : "+ Agregar"}
         </button>
@@ -102,59 +105,38 @@ export default function EvidenciasOrden({ ordenId }: Props) {
 
       {/* Grid */}
       {items.length === 0 ? (
-        <div
-          style={{
-            marginTop: 18,
-            height: 180,
-            borderRadius: 12,
-            border: "2px dashed #d0d5dd",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#667085",
-            fontWeight: 600,
-          }}
-        >
-          No hay evidencias aún. Sube una foto o video para documentar el trabajo.
+        <div className="mt-4 flex h-44 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 text-center text-sm font-semibold text-slate-500">
+          No hay evidencias aún. Sube una foto o video para documentar el
+          trabajo.
         </div>
       ) : (
-        <div
-          style={{
-            marginTop: 18,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-            gap: 12,
-          }}
-        >
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {items.map((ev) => (
             <div
               key={ev.id}
-              style={{
-                borderRadius: 12,
-                overflow: "hidden",
-                border: "1px solid #eef2f6",
-                background: "#fafafa",
-              }}
+              className="overflow-hidden rounded-xl border border-slate-200 bg-white"
               title={ev.tipo}
             >
               {ev.tipo === "FOTO" ? (
                 <img
-                  src={`${API}${ev.url}`}
-                  style={{ width: "100%", height: 120, objectFit: "cover", display: "block" }}
+                  src={`${import.meta.env.VITE_API_URL}${ev.url}`}
+                  className="h-28 w-full object-cover"
+                  alt="Evidencia"
+                  loading="lazy"
                 />
               ) : (
                 <video
-                  src={`${API}${ev.url}`}
-                  style={{ width: "100%", height: 120, objectFit: "cover", display: "block" }}
+                  src={`${import.meta.env.VITE_API_URL}${ev.url}`}
+                  className="h-28 w-full object-cover"
                   controls
                 />
               )}
 
-              <div style={{ padding: 10, display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: "#344054" }}>
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-xs font-extrabold text-slate-800">
                   {ev.tipo}
                 </span>
-                <span style={{ fontSize: 12, color: "#667085" }}>
+                <span className="text-xs text-slate-500">
                   {new Date(ev.createdAt).toLocaleDateString()}
                 </span>
               </div>
@@ -164,4 +146,4 @@ export default function EvidenciasOrden({ ordenId }: Props) {
       )}
     </div>
   );
-}   
+}
