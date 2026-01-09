@@ -343,7 +343,7 @@ export default function OrderDetailPage() {
               </div>
             )}
 
-            <div className="mt-4">
+            <div className="mt-8">
               <EvidenciasOrden ordenId={orden.id} disabled={esCerrada} />
             </div>
           </div>
