@@ -342,6 +342,10 @@ export default function OrderDetailPage() {
                 ✅ Orden cerrada · Solo lectura
               </div>
             )}
+
+            <div className="mt-4">
+              <EvidenciasOrden ordenId={orden.id} disabled={esCerrada} />
+            </div>
           </div>
 
           <div className="flex flex-col gap-2">
@@ -451,8 +455,7 @@ export default function OrderDetailPage() {
             </button>
           </div>
         </div>
-        {/* component evidencia */}
-        <EvidenciasOrden ordenId={orden.id} disabled={esCerrada} />
+
         <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
           <div className="text-xs font-semibold uppercase text-slate-500">
             Motivo de ingreso
