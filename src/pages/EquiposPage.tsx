@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { authFetch } from "../api/client";
 import NuevoEquipoModal from "../components/NuevoEquipoModal";
 import { useToast } from "../ui/toast/ToastProvider";
-import NuevaOrdenModal from "../components/NuevaOrdenModal";
+import NuevaOrdenModal from "../components/NuevaOrdenModal"; 
 
 type Equipo = {
   id: number;
