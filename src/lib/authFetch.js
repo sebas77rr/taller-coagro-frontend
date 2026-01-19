@@ -20,4 +20,4 @@ export async function authFetch(path, options = {}) {
 
   return res.json();
 }
-
+  
