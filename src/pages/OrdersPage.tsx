@@ -1,16 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "../api/client";
 import NuevoEquipoModal from "../components/NuevoEquipoModal";
 import { useToast } from "../ui/toast/ToastProvider";
+import OrdenesFilters from "../components/ordenes/OrdenesFilters";
 
 type Orden = {
   id: number;
   codigo: string;
   estado: string;
   cliente: { nombre: string } | null;
-  equipo: { marca: string; modelo: string } | null;
+  equipo: { marca: string; modelo: string; serial?: string | null } | null;
   fechaIngreso: string;
+  tecnicoAsignadoId?: number | null; // por si tu API lo trae
+  tecnicoId?: number | null; // fallback
+};
+
+type Tecnico = {
+  id: number;
+  nombre: string;
 };
 
 export default function OrdersPage() {
@@ -19,7 +27,23 @@ export default function OrdersPage() {
 
   const [openNuevoEquipo, setOpenNuevoEquipo] = useState(false);
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
+  const [tecnicos, setTecnicos] = useState<Tecnico[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // filtros
+  const [q, setQ] = useState("");
+  const [estadoFiltro, setEstadoFiltro] = useState("ALL");
+  const [tecnicoId, setTecnicoId] = useState("ALL");
+  const [desde, setDesde] = useState(""); // yyyy-mm-dd
+  const [hasta, setHasta] = useState(""); // yyyy-mm-dd
+
+  const clearFilters = () => {
+    setQ("");
+    setEstadoFiltro("ALL");
+    setTecnicoId("ALL");
+    setDesde("");
+    setHasta("");
+  };
 
   const fetchOrdenes = async () => {
     try {
@@ -34,13 +58,23 @@ export default function OrdersPage() {
     }
   };
 
-  useEffect(() => {   
+  const fetchTecnicos = async () => {
+    try {
+      const data = await authFetch("/api/tecnicos");
+      setTecnicos(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.warn("No se pudieron cargar técnicos (filtros):", err);
+      setTecnicos([]);
+    }
+  };
+
+  useEffect(() => {
     fetchOrdenes();
+    fetchTecnicos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const badgeEstado = (estado: string) => {
-    // versión simple: mismo color, pero queda centralizado para mejorar después
     return (
       <span className="rounded bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
         {estado}
@@ -48,17 +82,68 @@ export default function OrdersPage() {
     );
   };
 
+  const norm = (v: any) =>
+    String(v ?? "")
+      .toLowerCase()
+      .trim();
+
+  const filteredOrdenes = useMemo(() => {
+    const qn = norm(q);
+
+    return (ordenes || [])
+      .filter((o) => {
+        if (!qn) return true;
+
+        const hay = [
+          o.codigo,
+          o.cliente?.nombre,
+          o.equipo?.marca,
+          o.equipo?.modelo,
+          o.equipo?.serial,
+        ]
+          .map(norm)
+          .join(" ");
+
+        return hay.includes(qn);
+      })
+      .filter((o) =>
+        estadoFiltro === "ALL" ? true : o.estado === estadoFiltro
+      )
+      .filter((o) => {
+        if (tecnicoId === "ALL") return true;
+        const tid = o.tecnicoAsignadoId ?? o.tecnicoId ?? null;
+        return String(tid ?? "") === tecnicoId;
+      })
+      .filter((o) => {
+        if (!desde && !hasta) return true;
+
+        const d = new Date(o.fechaIngreso);
+        if (Number.isNaN(d.getTime())) return true;
+
+        if (desde) {
+          const from = new Date(`${desde}T00:00:00`);
+          if (d < from) return false;
+        }
+        if (hasta) {
+          const to = new Date(`${hasta}T23:59:59`);
+          if (d > to) return false;
+        }
+        return true;
+      });
+  }, [ordenes, q, estadoFiltro, tecnicoId, desde, hasta]);
+
+  const hasOrdenes = !loading && ordenes.length > 0;
+  const hasResultados = !loading && filteredOrdenes.length > 0;
+
   return (
     <>
       {/* Título + botón registrar maquinaria */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-800">
             Órdenes de servicio
           </h1>
-          <p className="text-xs text-slate-500">
-            Vista global · Filtros en desarrollo v1.0
-          </p>
+          <p className="text-xs text-slate-500">Vista global</p>
         </div>
 
         <button
@@ -69,21 +154,57 @@ export default function OrdersPage() {
         </button>
       </div>
 
+      {/* Panel de filtros */}
+      <OrdenesFilters
+        q={q}
+        setQ={setQ}
+        estado={estadoFiltro}
+        setEstado={setEstadoFiltro}
+        tecnicoId={tecnicoId}
+        setTecnicoId={setTecnicoId}
+        desde={desde}
+        setDesde={setDesde}
+        hasta={hasta}
+        setHasta={setHasta}
+        total={ordenes.length}
+        filtradas={filteredOrdenes.length}
+        tecnicos={tecnicos}
+        onClear={clearFilters}
+      />
+
       {/* Loading */}
       {loading && (
-        <div className="text-center text-slate-600">Cargando órdenes...</div>
+        <div className="mt-4 text-center text-slate-600">
+          Cargando órdenes...
+        </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state: no hay órdenes en el sistema */}
       {!loading && ordenes.length === 0 && (
-        <div className="rounded-xl bg-white p-10 text-center shadow">
+        <div className="mt-4 rounded-xl bg-white p-10 text-center shadow">
           <p className="text-slate-600">No hay órdenes registradas aún.</p>
         </div>
       )}
 
+      {/* Empty state: hay órdenes pero filtros dejan 0 */}
+      {hasOrdenes && !hasResultados && (
+        <div className="mt-4 rounded-xl bg-white p-10 text-center shadow">
+          <p className="text-slate-600">
+            No hay resultados con los filtros actuales.
+          </p>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      )}
+
       {/* Tabla de órdenes */}
-      {!loading && ordenes.length > 0 && (
-        <div className="overflow-hidden rounded-xl bg-white shadow">
+      {hasResultados && (
+        <div className="mt-4 overflow-hidden rounded-xl bg-white shadow">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-100 text-slate-700">
               <tr>
@@ -97,7 +218,7 @@ export default function OrdersPage() {
             </thead>
 
             <tbody>
-              {ordenes.map((o) => (
+              {filteredOrdenes.map((o) => (
                 <tr
                   key={o.id}
                   className="border-t border-slate-200 hover:bg-slate-50"
@@ -134,10 +255,9 @@ export default function OrdersPage() {
         onCreated={() => {
           setOpenNuevoEquipo(false);
           toast.success("Equipo registrado", "Listo");
-          // Si quieres, aquí puedes redirigir a /equipos o refrescar equipos.
-          // fetchOrdenes(); // (solo si en el futuro registrar equipo también crea orden)
         }}
-      />    
+      />
     </>
   );
 }
+   
