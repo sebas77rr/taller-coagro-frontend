@@ -117,6 +117,12 @@ export default function EvidenciasOrden({
     }
   };
 
+  const mediaSrc = (url: string) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) return url; // Cloudinary
+    return `${FILE_BASE}${url}`; // legacy /uploads
+  };
+
   return (
     <>
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -169,14 +175,14 @@ export default function EvidenciasOrden({
                 >
                   {ev.tipo === "FOTO" ? (
                     <img
-                      src={`${FILE_BASE}${ev.url}`}
+                      src={mediaSrc(ev.url)}
                       className="h-28 w-full object-cover"
                       alt="Evidencia"
                       loading="lazy"
                     />
                   ) : (
                     <video
-                      src={`${FILE_BASE}${ev.url}`}
+                      src={mediaSrc(ev.url)}
                       className="h-28 w-full object-cover"
                       controls
                     />
@@ -240,13 +246,13 @@ export default function EvidenciasOrden({
             <div className="max-h-[75vh] overflow-auto bg-black">
               {viewerItem.tipo === "FOTO" ? (
                 <img
-                  src={`${FILE_BASE}${viewerItem.url}`}
+                  src={mediaSrc(viewerItem.url)}
                   className="mx-auto max-h-[75vh] w-auto object-contain"
                   alt="Evidencia ampliada"
-                />
+                />  
               ) : (
                 <video
-                  src={`${FILE_BASE}${viewerItem.url}`}
+                  src={mediaSrc(viewerItem.url)}
                   className="mx-auto max-h-[75vh] w-full"
                   controls
                   autoPlay
