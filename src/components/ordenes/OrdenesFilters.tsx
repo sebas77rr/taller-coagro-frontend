@@ -18,9 +18,6 @@ type Props = {
   hasta: string;
   setHasta: (v: string) => void;
 
-  total: number;
-  filtradas: number;
-
   tecnicos: Tecnico[];
   onClear: () => void;
 };
@@ -36,13 +33,11 @@ export default function OrdenesFilters({
   setDesde,
   hasta,
   setHasta,
-  total,
-  filtradas,
   tecnicos,
   onClear,
 }: Props) {
   return (
-    <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+    <div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
         {/* Buscar */}
         <div className="md:col-span-2">
@@ -121,17 +116,12 @@ export default function OrdenesFilters({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-xs font-semibold text-slate-500">
-          Mostrando{" "}
-          <span className="font-extrabold text-slate-800">{filtradas}</span> de{" "}
-          <span className="font-extrabold text-slate-800">{total}</span>
-        </div>
-
+      {/* Acciones */}
+      <div className="mt-3 flex items-center justify-end">
         <button
           type="button"
           onClick={onClear}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50"
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-extrabold text-slate-700 hover:bg-slate-50 md:w-auto"
         >
           Limpiar filtros
         </button>

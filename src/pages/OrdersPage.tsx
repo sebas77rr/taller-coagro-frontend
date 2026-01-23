@@ -12,8 +12,8 @@ type Orden = {
   cliente: { nombre: string } | null;
   equipo: { marca: string; modelo: string; serial?: string | null } | null;
   fechaIngreso: string;
-  tecnicoAsignadoId?: number | null; // por si tu API lo trae
-  tecnicoId?: number | null; // fallback
+  tecnicoAsignadoId?: number | null;
+  tecnicoId?: number | null;
 };
 
 type Tecnico = {
@@ -34,8 +34,8 @@ export default function OrdersPage() {
   const [q, setQ] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("ALL");
   const [tecnicoId, setTecnicoId] = useState("ALL");
-  const [desde, setDesde] = useState(""); // yyyy-mm-dd
-  const [hasta, setHasta] = useState(""); // yyyy-mm-dd
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
 
   const clearFilters = () => {
     setQ("");
@@ -137,40 +137,58 @@ export default function OrdersPage() {
 
   return (
     <>
-      {/* Título + botón registrar maquinaria */}
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800">
-            Órdenes de servicio
-          </h1>
-          <p className="text-xs text-slate-500">Vista global</p>
-        </div>
-
-        <button
-          onClick={() => setOpenNuevoEquipo(true)}
-          className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600"
-        >
-          + Registrar maquinaria
-        </button>
+      {/* Header (sin botón) */}
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-slate-800">
+          Órdenes de servicio
+        </h1>
+        <p className="text-xs text-slate-500">Vista global</p>
       </div>
 
-      {/* Panel de filtros */}
-      <OrdenesFilters
-        q={q}
-        setQ={setQ}
-        estado={estadoFiltro}
-        setEstado={setEstadoFiltro}
-        tecnicoId={tecnicoId}
-        setTecnicoId={setTecnicoId}
-        desde={desde}
-        setDesde={setDesde}
-        hasta={hasta}
-        setHasta={setHasta}
-        total={ordenes.length}
-        filtradas={filteredOrdenes.length}
-        tecnicos={tecnicos}
-        onClear={clearFilters}
-      />
+      {/* Panel de filtros (Opción B) */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        {/* Header del panel */}
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-sm font-extrabold text-slate-900">Filtros</div>
+            <div className="text-xs font-semibold text-slate-500">
+              Mostrando{" "}
+              <span className="font-extrabold text-slate-800">
+                {filteredOrdenes.length}
+              </span>{" "}
+              de{" "}
+              <span className="font-extrabold text-slate-800">
+                {ordenes.length}
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setOpenNuevoEquipo(true)}
+            className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-extrabold text-white shadow-sm hover:bg-emerald-600 md:w-auto"
+          >
+            + Registrar maquinaria
+          </button>
+        </div>
+
+        {/* Body filtros */}
+        <div className="mt-4">
+          <OrdenesFilters
+            q={q}
+            setQ={setQ}
+            estado={estadoFiltro}
+            setEstado={setEstadoFiltro}
+            tecnicoId={tecnicoId}
+            setTecnicoId={setTecnicoId}
+            desde={desde}
+            setDesde={setDesde}
+            hasta={hasta}
+            setHasta={setHasta}
+            tecnicos={tecnicos}
+            onClear={clearFilters}
+          />
+        </div>
+      </div>
 
       {/* Loading */}
       {loading && (
@@ -179,7 +197,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Empty state: no hay órdenes en el sistema */}
+      {/* Empty state: no hay órdenes */}
       {!loading && ordenes.length === 0 && (
         <div className="mt-4 rounded-xl bg-white p-10 text-center shadow">
           <p className="text-slate-600">No hay órdenes registradas aún.</p>
@@ -202,7 +220,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Tabla de órdenes */}
+      {/* Tabla */}
       {hasResultados && (
         <div className="mt-4 overflow-hidden rounded-xl bg-white shadow">
           <table className="min-w-full text-sm">
@@ -248,7 +266,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Modal para registrar maquinaria */}
+      {/* Modal */}
       <NuevoEquipoModal
         open={openNuevoEquipo}
         onClose={() => setOpenNuevoEquipo(false)}
@@ -260,4 +278,3 @@ export default function OrdersPage() {
     </>
   );
 }
-   
