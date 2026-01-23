@@ -75,8 +75,17 @@ export default function OrdersPage() {
   }, []);
 
   const badgeEstado = (estado: string) => {
+    const map: Record<string, string> = {
+      ABIERTA: "bg-blue-100 text-blue-700",
+      EN_PROCESO: "bg-amber-100 text-amber-700",
+      FINALIZADA: "bg-emerald-100 text-emerald-700",
+      ENTREGADA: "bg-slate-200 text-slate-700",
+    };
+
+    const cls = map[estado] || "bg-slate-100 text-slate-700";
+
     return (
-      <span className="rounded bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+      <span className={`rounded px-2 py-1 text-xs font-semibold ${cls}`}>
         {estado}
       </span>
     );
